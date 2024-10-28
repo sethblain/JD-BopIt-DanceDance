@@ -8,6 +8,8 @@ volatile int encoderPosition = 0;  // Track encoder position
 unsigned long previousTime = 0;
 const unsigned long timeWindow = 1000;  // 1-second window
 
+void checkTurns(unsigned long currentTime);
+
 void updateEncoder() {
   int aState = digitalRead(encoderPinA);
   int bState = digitalRead(encoderPinB);
@@ -34,7 +36,11 @@ void setup() {
 
 void loop() {
   unsigned long currentTime = millis();
+  checkTurns(currentTime);
+}
 
+void checkTurns(unsigned long currentTime){
+  
   // Check if 1 second has passed
   if (currentTime - previousTime >= timeWindow) {
     previousTime = currentTime;
