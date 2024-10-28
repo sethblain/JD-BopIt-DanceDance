@@ -19,7 +19,7 @@ D |       |       |       | B
 */
 
 // action success variable
-int dpad_success;
+bool dpad_success;
 
 // score
 long user_score = 0;
@@ -45,11 +45,21 @@ void loop() {
   digitalWrite(7, HIGH);
   delay(1);
   digitalWrite(8, HIGH);
+  delay(1);
+  digitalWrite(3, HIGH);
+  delay(1);
+  digitalWrite(10, HIGH);
   delay(250);
+
   digitalWrite(7, LOW);
   delay(1);
   digitalWrite(8, LOW);
+  delay(1);
+  digitalWrite(3, LOW);
+  delay(1);
+  digitalWrite(10, LOW);
   delay(250);
+  // for trace and debugging purposes, not necessary in final
 
   // time interval for command completion, in milliseconds
   unsigned long time_interval = 10000; // user has 10 seconds to complete
@@ -57,8 +67,7 @@ void loop() {
   dpad_success = d_pad_action(time_interval);
   //d_pad_action(time_interval);
 
-  if (dpad_success != 0) {
-    //Serial.print(F("Action failed!"));
+  if (!dpad_success) {
     digitalWrite(7, HIGH);
     delay(1);
     digitalWrite(8, HIGH);
@@ -74,7 +83,7 @@ void loop() {
   }
 }
 
-int d_pad_action(unsigned long time_interval) {
+bool d_pad_action(unsigned long time_interval) {
   //set up timing for pin delay
   unsigned long setup_start = millis();
   unsigned long pad1_on_time = millis();
@@ -85,10 +94,10 @@ int d_pad_action(unsigned long time_interval) {
   while (pad2 == pad1) { pad2 = random(0, 4); } // if pad2 == pad1, choose again
 
   // set up flags
-  bool padA = false;
-  bool padB = false;
-  bool padC = false;
-  bool padD = false;
+  bool padA = false;  // state of pad A
+  bool padB = false;  // state of pad B
+  bool padC = false;  // state of pad C
+  bool padD = false;  // state of pad D
   bool inputReceived = false;
 
   // turn on pad1 indicator LED
@@ -182,7 +191,7 @@ int d_pad_action(unsigned long time_interval) {
     // check if time limit has been exceeded
     curr_time = millis();  // read current millis
     if (curr_time - start_time > time_interval) {
-      return -1;
+      return false;   // failure via time limit exceeded, return false
     }
   }
 
@@ -191,27 +200,27 @@ int d_pad_action(unsigned long time_interval) {
   // user was instructed to hit Pad A and Pad B
   if (pad1 == 0 && pad2 == 1) {
     // did user hit pad A and pad B?
-    if (!padA || !padB) return -1;
+    if (!padA || !padB) return false;  // input failure, return false
   }
   else if (pad1 == 0 && pad2 == 2) {  // user was instruced to hit pad A and Pad C
     // did user hit pad A and pad C?
-    if (!padA || !padC) return -1;
+    if (!padA || !padC) return false;
   }
   else if (pad1 == 0 && pad2 == 3) {  // user was instructed to hit Pad A and Pad D
     // did user hit pad A and pad D?
-    if (!padA || !padD) return -1;
+    if (!padA || !padD) return false;
   }
   else if (pad1 == 1 && pad2 == 2) {  // user was instructed to hit Pad B and Pad C
     // did user hit pad B and pad C?
-    if (!padB || !padC) return -1;
+    if (!padB || !padC) return false;
   }
   else if (pad1 == 1 and pad2 == 3) {  // user was instructed to hit Pad B and Pad D
     // did user hit pad B and pad D?
-    if (!padB || !padD) return -1;
+    if (!padB || !padD) return false;
   }
   else if (pad1 == 2 and pad2 == 3) {  // user was instructed to hit Pad C and Pad D
     // did user hit pad C and pad D?
-    if (!padC || !padD) return -1;
+    if (!padC || !padD) return false;
   }
 
   // user input is correct, turn off indicators and return success
@@ -224,10 +233,6 @@ int d_pad_action(unsigned long time_interval) {
   // digitalWrite(8, LOW);
   // delay(1);
 
-  return 0;
+  // user has completed action successfully, return true
+  return true;
 }
-
-
-
-
-
