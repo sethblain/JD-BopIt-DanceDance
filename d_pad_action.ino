@@ -27,16 +27,16 @@ long user_score = 0;
 
 void setup() {
   // set up pins 5 and 6 as input for button action
-  pinMode(5, INPUT);
-  pinMode(6, INPUT);
-  pinMode(9, INPUT); 
-  pinMode(15, INPUT);  // analog pin 24/A1 as digital
+  pinMode(5, INPUT);    // pad a
+  pinMode(16, INPUT);   // pad b, analog pun 25/A2 as digital  TODO change from pin 6 in source code
+  pinMode(9, INPUT);    // pad c
+  pinMode(15, INPUT);   // pad d, analog pin 24/A1 as digital
 
   // set up pins 7 and 8 as output for led indication
-  pinMode(7, OUTPUT);
-  pinMode(8, OUTPUT);
-  pinMode(3, OUTPUT);
-  pinMode(10, OUTPUT);
+  pinMode(7, OUTPUT);   // pad a indicator
+  pinMode(8, OUTPUT);   // pad b indicator
+  pinMode(3, OUTPUT);   // pad c indicator
+  pinMode(10, OUTPUT);  // pad d indicator
   
 }
 
@@ -161,7 +161,7 @@ int d_pad_action(unsigned long time_interval) {
       inputReceived = true;
     }
 
-    if (digitalRead(6) == HIGH) {
+    if (digitalRead(16) == HIGH) {
       // pad B activated, input recieved
       padB = true;
       if (!inputReceived) inputReceived = true;
