@@ -19,6 +19,7 @@ void checkTurns(unsigned long currentTime);
 void updateEncoder() {
   if(!gameStarted) return; //do not run code if game hasn't started
 
+void updateEncoder() {
   int aState = digitalRead(encoderPinA);
   int bState = digitalRead(encoderPinB);
 
