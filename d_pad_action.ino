@@ -27,14 +27,16 @@ long user_score = 0;
 
 void setup() {
   // set up pins 5 and 6 as input for button action
-  pinMode (5, INPUT);
+  pinMode(5, INPUT);
   pinMode(6, INPUT);
+  pinMode(9, INPUT); 
+  pinMode(15, INPUT);  // analog pin 24/A1 as digital
 
   // set up pins 7 and 8 as output for led indication
   pinMode(7, OUTPUT);
   pinMode(8, OUTPUT);
-
-  //Serial.begin(9600);
+  pinMode(3, OUTPUT);
+  pinMode(10, OUTPUT);
   
 }
 
@@ -68,9 +70,7 @@ void loop() {
     while(1);  // wait until reset
   }
   else {
-    //Serial.print(F("Action success!"));
     ++user_score;
-    //Serial.print(user_score);
   }
 }
 
@@ -80,16 +80,15 @@ int d_pad_action(unsigned long time_interval) {
   unsigned long pad1_on_time = millis();
   unsigned long pad2_on_time = millis();
 
-  long pad1 = random(0, 2);  // randomly choose d-pad number for pad1 (choose 0 or 1 currently, 0, 1, 2, 3 in full implementation)
-  // long pad2 = random(0, 4)  // randomly choose d-pad number for pad2
-  // while (pad2 == pad1) { pad2 = random(0, 4) };  // if pad2 == pad1, choose again
-  //Serial.print(F("pads selected!"));
+  long pad1 = random(0, 4);  // randomly choose d-pad number for pad1 (choose 0, 1, 2, 3 in full implementation)
+  long pad2 = random(0, 4);  // randomly choose d-pad number for pad2
+  while (pad2 == pad1) { pad2 = random(0, 4); } // if pad2 == pad1, choose again
 
   // set up flags
   bool padA = false;
   bool padB = false;
-  // bool padC = false;
-  // bool padD = false;
+  bool padC = false;
+  bool padD = false;
   bool inputReceived = false;
 
   // turn on pad1 indicator LED
@@ -98,27 +97,22 @@ int d_pad_action(unsigned long time_interval) {
       // turn indicator LED for pad A on
       digitalWrite(7, HIGH);
       delay(1);
-      //Serial.print(F("UP"));
       break;
     case 1:
       // turn indicator LED for pad B on
       digitalWrite(8, HIGH);
       delay(1);
-      //Serial.print(F("RIGHT"));
       break;
-    // case 2:
-    //   // turn indicator LED for pad C on
-    //   digitalWrite(9, HIGH);
-    //   Serial.print(F("DOWN"));
-    //   break;
-    // case 3:
-    //   // turn indicator LED for pad D on
-    //   digitalWrite(10, HIGH);
-    //   Serial.print(F("LEFT"));
-    //   break;
+    case 2:
+      // turn indicator LED for pad C on
+      digitalWrite(3, HIGH);
+      break;
+    case 3:
+      // turn indicator LED for pad D on
+      digitalWrite(10, HIGH);
+      break;
     default:
       // default case, should only go here if for some reason a pad # was not selected
-      //Serial.print(F("shouldn't get here tbh"));
         digitalWrite(7, HIGH);
         delay(250);
         digitalWrite(7, LOW);
@@ -131,32 +125,28 @@ int d_pad_action(unsigned long time_interval) {
   }
 
   // turn on pad2 indicator LED
-  // switch (pad2) {
-  //   case 0:
-  //     // turn indicator LED for pad A on
-  //     digitalWrite(7, HIGH);
-  //     Serial.print(F("UP"));
-  //     break;
-  //   case 1:
-  //     // turn indicator LED for pad B on
-  //     digitalWrite(8, HIGH);
-  //     Serial.print(F("RIGHT"));
-  //     break;
-  //   // case 2:
-  //   //   // turn indicator LED for pad C on
-  //   //   digitalWrite(9, HIGH);
-  //   //   Serial.print(F("DOWN"));
-  //   //   break;
-  //   // case 3:
-  //   //   // turn indicator LED for pad D on
-  //   //   digitalWrite(10, HIGH);
-  //   //   Serial.print(F("LEFT"));
-  //   //   break;
-  //   default:
-  //     // default case, should only go here if for some reason a pad # was not selected
-  //     Serial.print(F("shouldn't get here tbh"));
-  //     break;
-  // }
+  switch (pad2) {
+    case 0:
+      // turn indicator LED for pad A on
+      digitalWrite(7, HIGH);
+      break;
+    case 1:
+      // turn indicator LED for pad B on
+      digitalWrite(8, HIGH);
+      break;
+    case 2:
+      // turn indicator LED for pad C on
+      digitalWrite(3, HIGH);
+      break;
+    case 3:
+      // turn indicator LED for pad D on
+      digitalWrite(10, HIGH);
+      break;
+    default:
+      // default case, should only go here if for some reason a pad # was not selected
+      // do nothing i guess
+      break;
+  }
 
   // start timer
   unsigned long start_time = millis();
@@ -177,54 +167,52 @@ int d_pad_action(unsigned long time_interval) {
       if (!inputReceived) inputReceived = true;
     }
 
-    // if (digitalRead(0) == HIGH) {
-    //   // pad C activated, input recieved
-    //   padC = true;
-    //   if (!inputReceived) inputReceived = true;
-    // }
+    if (digitalRead(9) == HIGH) {
+      // pad C activated, input recieved
+      padC = true;
+      if (!inputReceived) inputReceived = true;
+    }
 
-    // if (digitalRead(1) == HIGH) {
-    //   //pad D activated, input recieved
-    //   padD = true;
-    //   if (!inputReceived) inputReceived = true;
-    // }
+    if (digitalRead(15) == HIGH) {
+      //pad D activated, input recieved
+      padD = true;
+      if (!inputReceived) inputReceived = true;
+    }
 
     // check if time limit has been exceeded
     curr_time = millis();  // read current millis
     if (curr_time - start_time > time_interval) {
-      //Serial.print(F("time limit exceeded"));
       return -1;
     }
   }
 
   // check if user input is correct
 
-  // user was instructed to hit Pad A
-  if (pad1 == 0) {
-    // turn off indicator leds
-    //digitalWrite(7, LOW);
-    //delay(1);
-    // did user hit pad A?
-    if (!padA) return -1;
+  // user was instructed to hit Pad A and Pad B
+  if (pad1 == 0 && pad2 == 1) {
+    // did user hit pad A and pad B?
+    if (!padA || !padB) return -1;
   }
-  else if (pad1 == 1) {  // user was instruced to hit pad B
-    //digitalWrite(8, LOW);
-    //delay(1);
-    // did user hit pad B?
-    if (!padB) return -1;
+  else if (pad1 == 0 && pad2 == 2) {  // user was instruced to hit pad A and Pad C
+    // did user hit pad A and pad C?
+    if (!padA || !padC) return -1;
   }
-
-  // // user was instructed to hit pad C
-  // if (pad1 == 2) {
-  //   // did user hit pad C?
-  //   if (!padC) return -1;
-  // }
-
-  // // user was instructed to hit pad D
-  // if (pad1 == 3) {
-  //   // did user hit pad D?
-  //   (!padD) return -1;
-  // }
+  else if (pad1 == 0 && pad2 == 3) {  // user was instructed to hit Pad A and Pad D
+    // did user hit pad A and pad D?
+    if (!padA || !padD) return -1;
+  }
+  else if (pad1 == 1 && pad2 == 2) {  // user was instructed to hit Pad B and Pad C
+    // did user hit pad B and pad C?
+    if (!padB || !padC) return -1;
+  }
+  else if (pad1 == 1 and pad2 == 3) {  // user was instructed to hit Pad B and Pad D
+    // did user hit pad B and pad D?
+    if (!padB || !padD) return -1;
+  }
+  else if (pad1 == 2 and pad2 == 3) {  // user was instructed to hit Pad C and Pad D
+    // did user hit pad C and pad D?
+    if (!padC || !padD) return -1;
+  }
 
   // user input is correct, turn off indicators and return success
   // digitalWrite(7, HIGH);
