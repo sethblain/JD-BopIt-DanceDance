@@ -87,7 +87,7 @@ void loop() {
 
   lcd.setCursor(0,0);
   lcd.print("                "); // clear the row
-  long rnd = random(0, 2); // replace second number with number of functions in functionPtr
+  long rnd = random(0, 3); // replace second number with number of functions in functionPtr
   functionPtr[rnd](time_interval);
 
   if (CORRECT_INPUT){
@@ -196,11 +196,6 @@ void slide_pot_action(unsigned long timeInterval) {
 }
 
 void d_pad_action(unsigned long timeInterval) {
-  //set up timing for pin delay
-  unsigned long setup_start = millis();   // i don't really remember why i have these but maybe i will remember eventually
-  unsigned long pad1_on_time = millis();  // ^^
-  unsigned long pad2_on_time = millis();  // otherwise i will get rid of them
-
   long pad1 = random(0, 4);  // randomly choose d-pad number for pad1 (choose 0, 1, 2, 3 in full implementation)
   long pad2 = random(0, 4);  // randomly choose d-pad number for pad2
   while (pad2 == pad1) { pad2 = random(0, 4); } // if pad2 == pad1, choose again
@@ -210,7 +205,8 @@ void d_pad_action(unsigned long timeInterval) {
   bool padB = false;  // state of pad B
   bool padC = false;  // state of pad C
   bool padD = false;  // state of pad D
-  bool inputReceived = false;
+  bool input1 = false;
+  bool input2 = false;
   bool correctInput = false;
 
   // turn on pad1 indicator LED
@@ -218,31 +214,31 @@ void d_pad_action(unsigned long timeInterval) {
     case 0:
       // turn indicator LED for pad A on
       digitalWrite(D_PAD_OUT_A, HIGH);
-      delay(1);
+      lcd.setCursor(0,0); 
+      lcd.print("A + ");
       break;
     case 1:
       // turn indicator LED for pad B on
       digitalWrite(D_PAD_OUT_B, HIGH);
-      delay(1);
+      lcd.setCursor(0,0); 
+      lcd.print("B + ");
       break;
     case 2:
       // turn indicator LED for pad C on
       digitalWrite(D_PAD_OUT_C, HIGH);
+      lcd.setCursor(0,0); 
+      lcd.print("C + ");
       break;
     case 3:
       // turn indicator LED for pad D on
       digitalWrite(D_PAD_OUT_D, HIGH);
+      lcd.setCursor(0,0); 
+      lcd.print("D + ");
       break;
     default:
       // default case, should only go here if for some reason a pad # was not selected
-        digitalWrite(D_PAD_OUT_A, HIGH);
-        delay(250);
-        digitalWrite(D_PAD_OUT_A, LOW);
-        delay(1);
-        digitalWrite(D_PAD_OUT_B, HIGH);
-        delay(250);
-        digitalWrite(D_PAD_OUT_B, LOW);
-        delay(1);
+      CORRECT_INPUT = false;
+      return;
       break;
   }
 
@@ -251,22 +247,32 @@ void d_pad_action(unsigned long timeInterval) {
     case 0:
       // turn indicator LED for pad A on
       digitalWrite(D_PAD_OUT_A, HIGH);
+      //lcd.setCursor(0,4); 
+      lcd.print("A");
       break;
     case 1:
       // turn indicator LED for pad B on
       digitalWrite(D_PAD_OUT_B, HIGH);
+      //lcd.setCursor(0,4); 
+      lcd.print("B");
       break;
     case 2:
       // turn indicator LED for pad C on
       digitalWrite(D_PAD_OUT_C, HIGH);
+      //lcd.setCursor(0,4); 
+      lcd.print("C");
       break;
     case 3:
       // turn indicator LED for pad D on
       digitalWrite(D_PAD_OUT_D, HIGH);
+      //lcd.setCursor(0,4); 
+      lcd.print("D");
       break;
     default:
       // default case, should only go here if for some reason a pad # was not selected
       // do nothing i guess
+      CORRECT_INPUT = false;
+      return;
       break;
   }
 
@@ -275,82 +281,95 @@ void d_pad_action(unsigned long timeInterval) {
   unsigned long curr_time = millis();
 
   // wait for user input
-  while (!inputReceived) {
+  while (!input1 || !input2) {
     // may have to add slight delay here before reading pin values
+    unsigned long delayBegin = millis();
+    unsigned long delayEnd = millis();
+
+    // give user time to press buttons
+    // TODO play with wait time interval
+    while (delayEnd - delayBegin < 250) {
+      delayEnd = millis();   // update end time
+    }
 
     // read all pins
     if (digitalRead(D_PAD_IN_A) == HIGH) {
       // pad A activated, input recieved
       padA = true;
-      inputReceived = true;
+      if (!input1) input1 = true;   // set input 1 recieved
+      else input2 = true;                   // before input 2 recieved
     }
 
     if (digitalRead(D_PAD_IN_B) == HIGH) {
       // pad B activated, input recieved
       padB = true;
-      if (!inputReceived) inputReceived = true;
+      if (!input1) input1 = true;
+      else input2 = true;
     }
 
     if (digitalRead(D_PAD_IN_C) == HIGH) {
       // pad C activated, input recieved
       padC = true;
-      if (!inputReceived) inputReceived = true;
+      if (!input1) input1 = true;
+      else input2 = true;
     }
 
     if (digitalRead(D_PAD_IN_D) == HIGH) {
       //pad D activated, input recieved
       padD = true;
-      if (!inputReceived) inputReceived = true;
+      if (!input1) input1 = true;
+      else input2 = true;
     }
 
     // check if time limit has been exceeded
     curr_time = millis();  // read current millis
     if (curr_time - start_time > time_interval) {
-      return false;   // failure via time limit exceeded, return false
+      correctInput = false;   // failure via time limit exceeded, return false
+      CORRECT_INPUT = correctInput;
+      digitalWrite(D_PAD_OUT_A, LOW);
+      delay(1);
+      digitalWrite(D_PAD_OUT_B, LOW);
+      delay(1);
+      digitalWrite(D_PAD_OUT_C, LOW);
+      delay(1);
+      digitalWrite(D_PAD_OUT_D, LOW);
+      delay(1);
+      return;
     }
   }
 
   // check if user input is correct
-  if (pad1 == 0 && pad2 == 1) {   // user was instructed to hit Pad A and Pad B
+  if ((pad1 == 0 && pad2 == 1) || (pad1 == 1 && pad2 == 0)) {   // user was instructed to hit Pad A and Pad B
     // did user hit pad A and pad B?
-    if (!padA || !padB) correctInput = false;  // NO
-    else correctInput = true;   // YES
+    if (padA && padB) correctInput = true;  // YES
+    else correctInput = false;   // NO
   }
-  else if (pad1 == 0 && pad2 == 2) {  // user was instruced to hit pad A and Pad C
+  else if ((pad1 == 0 && pad2 == 2) || (pad1 == 2 && pad2 == 0)) {  // user was instruced to hit pad A and Pad C
     // did user hit pad A and pad C?
-    if (!padA || !padC) correctInput = false;   // NO
-    else correctInput = true;   // YES
+    if (padA && padC) correctInput = true;   // YES
+    else correctInput = false;   // NO
   }
-  else if (pad1 == 0 && pad2 == 3) {  // user was instructed to hit Pad A and Pad D
+  else if ((pad1 == 0 && pad2 == 3) || (pad1 == 3 && pad2 == 0)) {  // user was instructed to hit Pad A and Pad D
     // did user hit pad A and pad D?
-    if (!padA || !padD) correctInput = false;   // NO
-    else correctInput = true;   // YES
+    if (padA && padD) correctInput = true;   // YES
+    else correctInput = false;   // NO
   }
-  else if (pad1 == 1 && pad2 == 2) {  // user was instructed to hit Pad B and Pad C
+  else if ((pad1 == 1 && pad2 == 2) || (pad1 == 2 && pad2 == 1)) {  // user was instructed to hit Pad B and Pad C
     // did user hit pad B and pad C?
-    if (!padB || !padC) correctInput = false;   // NO
-    else correctInput = true;   // YES
+    if (padB && padC) correctInput = true;   // YES
+    else correctInput = false;   // NO
   }
-  else if (pad1 == 1 and pad2 == 3) {  // user was instructed to hit Pad B and Pad D
+  else if ((pad1 == 1 && pad2 == 3) || (pad1 == 3 && pad2 == 1)) {  // user was instructed to hit Pad B and Pad D
     // did user hit pad B and pad D?
-    if (!padB || !padD) correctInput = false;   // NO
-    else correctInput = true;   // YES
+    if (padB && padD) correctInput = true;   // YES
+    else correctInput = false;   // NO
   }
-  else if (pad1 == 2 and pad2 == 3) {  // user was instructed to hit Pad C and Pad D
+  else if ((pad1 == 2 && pad2 == 3) || (pad1 == 3 &&  pad2 == 2)) {  // user was instructed to hit Pad C and Pad D
     // did user hit pad C and pad D?
-    if (!padC || !padD) correctInput = false;   // NO
-    else correctInput = true;   // YES
+    if (padC && padD) correctInput = true;   // YES
+    else correctInput = false;   // NO
   }
 
-  // turn off indicators LEDs
-  digitalWrite(D_PAD_OUT_A, HIGH);
-  delay(1);
-  digitalWrite(D_PAD_OUT_B, HIGH);
-  delay(1);
-  digitalWrite(D_PAD_OUT_C, HIGH);
-  delay(1);
-  digitalWrite(D_PAD_OUT_D, HIGH);
-  delay(1);
   digitalWrite(D_PAD_OUT_A, LOW);
   delay(1);
   digitalWrite(D_PAD_OUT_B, LOW);
@@ -359,7 +378,6 @@ void d_pad_action(unsigned long timeInterval) {
   delay(1);
   digitalWrite(D_PAD_OUT_D, LOW);
   delay(1);
-
 
   // update CORRECT_INPUT
   CORRECT_INPUT = correctInput;
