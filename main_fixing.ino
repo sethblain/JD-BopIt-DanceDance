@@ -33,6 +33,7 @@ void d_pad_action();
 void playSelected(byte);
 void slide_pot_action();
 void checkButtonHold();
+void check_io();
 
 // Track indexes:
 const uint8_t TURN_IT_UP_SOUND = 1;
@@ -65,31 +66,31 @@ int SLIDE_POT_PIN = 0;
 State curr_state = ON;
 State next_state;
 
-int random_func_int = 0;
+volatile int random_func_int;
 
 // flags
-bool CORRECT_INPUT;
+bool CORRECT_INPUT = false;
 bool GAME_STARTED = false;
 volatile bool encoder_pressed = false;
-bool IO_state_changed;
+bool IO_state_changed = false;
 bool slide_moved;
 bool encoder_turned;
-bool padA_pushed;
-bool padB_pushed;
-bool padC_pushed;
-bool padD_pushed;
+volatile bool padA_pushed;
+volatile bool padB_pushed;
+volatile bool padC_pushed;
+volatile bool padD_pushed;
 
 // I/O states
-int pad1;   // target input for d-pad 1
-int pad2;   // target input for d-pad 2
-int padA_prev;
-int padB_prev; 
-int padC_prev; 
-int padD_prev; 
-int padA_new;
-int padB_new; 
-int padC_new; 
-int padD_new;
+volatile int pad1;   // target input for d-pad 1
+volatile int pad2;   // target input for d-pad 2
+volatile int padA_prev;
+volatile int padB_prev; 
+volatile int padC_prev; 
+volatile int padD_prev; 
+volatile int padA_new;
+volatile int padB_new; 
+volatile int padC_new; 
+volatile int padD_new;
 volatile int slide_prev;
 volatile int slide_new;
 int encoder_prev;
@@ -103,6 +104,15 @@ unsigned int time_interval = 4000;
 unsigned int score = 0;
 
 void setup() {
+
+  pinMode(D_PAD_IN_A, INPUT);
+  pinMode(D_PAD_IN_B, INPUT);
+  pinMode(D_PAD_IN_C, INPUT);
+  pinMode(D_PAD_IN_D, INPUT);
+  pinMode(D_PAD_OUT_A, OUTPUT);
+  pinMode(D_PAD_OUT_B, OUTPUT);
+  pinMode(D_PAD_OUT_C, OUTPUT);
+  pinMode(D_PAD_OUT_D, OUTPUT);
 
   slide_prev = analogRead(SLIDE_POT_PIN);
   padA_prev = digitalRead(D_PAD_IN_A);
@@ -122,153 +132,200 @@ void setup() {
   // Attach interrupts to the encoder pins
   attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_A), updateEncoder, CHANGE);
   attachInterrupt(digitalPinToInterrupt(ENCODER_PIN_B), updateEncoder, CHANGE);
+  // delay(1000);
+  // digitalWrite(10, LOW);
 
 }
 
-void loop() {
+void (* resetFunc)(void) = 0;
+
+void loop(){
 
   // next state logic case
   switch(curr_state){
   case ON:
+    time_interval = 4000;
+    checkButtonHold();
     if (encoder_pressed)
       next_state = TURN_IT_UP;
     else
       next_state = ON;
     break;
   case ACTION_SEL:
-    next_state = TURN_IT_UP;
+    random_func_int = random(0,3);
+    if (random_func_int == 0)
+      next_state = TURN_IT_UP;
+    else
+      next_state = DANCE;
     break;
   case TURN_IT_UP:
+    slide_pot_action();
     next_state = CHECK_IO;
     break;
   case SPIN_IT:
+    checkTurns();
     next_state = CHECK_IO;
     break;
   case DANCE:
+    d_pad_action();
     next_state = CHECK_IO;
     break;
   case CHECK_IO:
+    check_io();
     if (IO_state_changed){
       next_state = DETECT_ACTION;
       IO_state_changed = false; // Reset the flag
     } else next_state = FAIL;
     break;
+
   case DETECT_ACTION:
     if (CORRECT_INPUT){
       next_state = SUCCESS;
+      lcd.clear();
+      lcd.setCursor(0,1);
+      lcd.print("corr input");
+      delay(1000);
       CORRECT_INPUT = false; // Reset the flag
-    } else next_state = FAIL;
+    } else{
+      next_state = FAIL;
+      lcd.clear();
+      lcd.setCursor(0,1);
+      lcd.print("wrong input");
+      delay(1000);
+    } 
     break;
   case SUCCESS:
     next_state = ACTION_SEL;
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print("SUCC");
+    delay(1000);
     break;
-  default:
+  case FAIL:
     next_state = ON;
+    lcd.clear();
+    lcd.setCursor(0,1);
+    lcd.print("FAIL");
+    delay(1000);
+    resetFunc();
     break;
   }
 
-  // Store previous state before updating
-  int prev_state = curr_state;
   curr_state = next_state;
 
-  // Debug print only when state changes
-  // if (prev_state != curr_state) {
-  //   lcd.clear();
-  //   lcd.setCursor(0,0);
-  //   lcd.print("State: " + String(curr_state));
-  //   lcd.setCursor(0,1);
-    
-  //   // Print state name for clarity
-  //   switch(curr_state) {
-  //     case ON: lcd.print("ON"); break;
-  //     case ACTION_SEL: lcd.print("ACTION_SEL"); break;
-  //     case TURN_IT_UP: lcd.print("TURN_IT_UP"); break;
-  //     case SPIN_IT: lcd.print("SPIN_IT"); break;
-  //     case DANCE: lcd.print("DANCE"); break;
-  //     case CHECK_IO: lcd.print("CHECK_IO"); break;
-  //     case DETECT_ACTION: lcd.print("DETECT_ACTION"); break;
-  //     case SUCCESS: lcd.print("SUCCESS"); break;
-  //     case FAIL: lcd.print("FAIL"); break;
-  //   }
-  //   delay(2000);
-  // }
+}
 
-  // state execution logic:
-  switch(curr_state){
-  case ON:
-    time_interval = 4000;
-    checkButtonHold();
-    break;
-  case ACTION_SEL:
-    break;
-  case TURN_IT_UP:
-    // call turn it up function
-    slide_pot_action();
-    // delay(1000);
-    break;
-  case SPIN_IT:
-    // call spin it func
-    checkTurns();
-    // delay(1000);
-    break;
-  case DANCE:
-    // call dance func
-    d_pad_action();
-    // delay(1000);
-    break;
-  case CHECK_IO:
+void check_io(){
+  volatile unsigned long start_time;
+  IO_state_changed = false;
+  CORRECT_INPUT = false;
+
+  lcd.setCursor(0,1);
+  lcd.print(String(random_func_int));
+  delay(1000);
+
+  if (random_func_int == 0)
+  {
     slide_new = analogRead(SLIDE_POT_PIN);
-    unsigned long start_time = millis();
-    IO_state_changed = false;
-    slide_moved = false;
-    CORRECT_INPUT = false;
+    start_time = millis();
     while (abs(millis() - start_time) < time_interval){
       if ((slide_prev < 100 && slide_new >= 100) || (slide_prev > 100 && slide_new <= 100)){
         IO_state_changed = true;
-        slide_moved = true;
         CORRECT_INPUT = true;
         break;
       }
       slide_new = analogRead(SLIDE_POT_PIN);  
     }
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("seth");
-    delay(2000);
-      
-    break;
-  case DETECT_ACTION:
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("DETECT");
-    delay(2000);
-    break;
-  case SUCCESS:
-    // increment score, display score, decrement time by .5%
-    // time_interval *= 0.995;
-    // score += 1;
-
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Success");
-    // lcd.setCursor(0,1);
-    // lcd.print(String(score));
-    // delay(2000);
-
-    break;
-  default:
-    // show final score, play you failed, reset score to 0
-    // playSelected(FAILED_SOUND);
-    lcd.clear();
-    lcd.setCursor(0,0);
-    lcd.print("Game Over");
-    // // lcd.setCursor(0,1);
-    // // lcd.print("Score: ");
-    delay(2000);
-    break;
+  } else{
+    start_time = millis();
+    while (abs(millis() - start_time) < time_interval){
+      if(pad1 == 0) {
+        int checkA = digitalRead(D_PAD_IN_A);
+        delay(250);
+        if (checkA == HIGH){
+          IO_state_changed = true;
+          CORRECT_INPUT = true;
+          break;
+        }
+      }
+      else if (pad1 == 1) {
+        int checkB = digitalRead(D_PAD_IN_B);
+        delay(250);
+        if (checkB == HIGH){
+          IO_state_changed = true;
+          CORRECT_INPUT = true;
+          break;
+        }
+      }
+      else if (pad1 == 2) {
+        int checkC = digitalRead(D_PAD_IN_C);
+        delay(250);
+        if (checkC == HIGH){
+          IO_state_changed = true;
+          CORRECT_INPUT = true;
+          break;
+        }
+      }
+      else {
+        int checkD = digitalRead(D_PAD_IN_D);
+        if (checkD == HIGH){
+          IO_state_changed = true;
+          CORRECT_INPUT = true;
+          lcd.clear();
+          lcd.setCursor(0,0);
+          lcd.print("here!");
+          delay(1000);
+          break;
+        }
+      }
+    }
   }
-  // delay(1000);
- 
+  // else {
+  //   while (abs(millis() - start_time) < time_interval){
+  //     // if pad1 is A and pad2 is B
+  //     if (pad1 == 1 && pad2 == 2){
+  //       if(padA_new == padA_prev || padB_new == padB_prev || padC_new != padC_prev || padD_new != padD_prev){
+  //         CORRECT_INPUT = false;
+  //       }
+  //     }
+  //     // if pad1 is A and pad2 is c
+  //     else if (pad1 == 1 && pad2 == 3){
+  //       if(padA_new == padA_prev || padB_new != padB_prev || padC_new == padC_prev || padD_new != padD_prev){
+  //         CORRECT_INPUT = false;
+  //       }
+  //     }
+  //     // if pad1 is A and pad2 is D
+  //     else if (pad1 == 1 && pad2 == 4){
+  //       if(padA_new == padA_prev || padB_new != padB_prev || padC_new != padC_prev || padD_new == padD_prev){
+  //         CORRECT_INPUT = false;
+  //       }
+  //     }
+  //     // if pad1 is B and pad2 is C
+  //     else if (pad1 == 2 && pad2 == 3){
+  //       if(padA_new != padA_prev || padB_new == padB_prev || padC_new == padC_prev || padD_new != padD_prev){
+  //         CORRECT_INPUT = false;
+  //       }
+  //     }
+  //     // if pad1 is B and pad2 is D
+  //     else if (pad1 == 2 && pad2 == 4){
+  //       if(padA_new != padA_prev || padB_new == padB_prev || padC_new != padC_prev || padD_new == padD_prev){
+  //         CORRECT_INPUT = false;
+  //       }
+  //     }
+  //     // if pad1 is C and pad2 is D
+  //     else if (pad1 == 3 && pad2 == 4){
+  //       if(padA_new != padA_prev || padB_new != padB_prev || padC_new == padC_prev || padD_new == padD_prev){
+  //         CORRECT_INPUT = false;
+  //       }
+  //     } else CORRECT_INPUT = true;
+  //   }
+  // }
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("checking");
+  delay(2000);
+  lcd.clear();
+  return;
 }
 
 void checkTurns(){
@@ -304,6 +361,11 @@ void slide_pot_action() {
 
 void d_pad_action() {
   // playSelected(DANCE_SOUND);
+  lcd.clear();
+  lcd.setCursor(0,0);
+  lcd.print("DANCE");
+  delay(1000);
+  lcd.clear();
 
   // read state before  anyinput
   padA_prev = digitalRead(D_PAD_IN_A);
@@ -322,29 +384,28 @@ void d_pad_action() {
       digitalWrite(D_PAD_OUT_A, HIGH);
       lcd.setCursor(0,0); 
       lcd.print("A + ");
+      //delay(1000);
       break;
     case 1:
       // turn indicator LED for pad B on
       digitalWrite(D_PAD_OUT_B, HIGH);
       lcd.setCursor(0,0); 
       lcd.print("B + ");
+      //delay(1000);
       break;
     case 2:
       // turn indicator LED for pad C on
       digitalWrite(D_PAD_OUT_C, HIGH);
       lcd.setCursor(0,0); 
       lcd.print("C + ");
+      //delay(1000);
       break;
     case 3:
       // turn indicator LED for pad D on
       digitalWrite(D_PAD_OUT_D, HIGH);
       lcd.setCursor(0,0); 
       lcd.print("D + ");
-      break;
-    default:
-      // default case, should only go here if for some reason a pad # was not selected
-      CORRECT_INPUT = false;
-      return;
+      //delay(1000);
       break;
   }
 
@@ -355,30 +416,28 @@ void d_pad_action() {
       digitalWrite(D_PAD_OUT_A, HIGH);
       //lcd.setCursor(0,4); 
       lcd.print("A");
+      delay(500);
       break;
     case 1:
       // turn indicator LED for pad B on
       digitalWrite(D_PAD_OUT_B, HIGH);
       //lcd.setCursor(0,4); 
       lcd.print("B");
+      delay(500);
       break;
     case 2:
       // turn indicator LED for pad C on
       digitalWrite(D_PAD_OUT_C, HIGH);
       //lcd.setCursor(0,4); 
       lcd.print("C");
+      delay(500);
       break;
     case 3:
       // turn indicator LED for pad D on
       digitalWrite(D_PAD_OUT_D, HIGH);
       //lcd.setCursor(0,4); 
       lcd.print("D");
-      break;
-    default:
-      // default case, should only go here if for some reason a pad # was not selected
-      // do nothing i guess
-      CORRECT_INPUT = false;
-      return;
+      delay(500);
       break;
   }
 
