@@ -474,87 +474,117 @@ volatile bool checkCorrect() {
         //delay(10);
         if (checkA == HIGH){
           if (pad2 == 1) {
-            int checkB = digitalRead(D_PAD_IN_B);
-            delay(10);
+            //int checkB = digitalRead(D_PAD_IN_B);
+            //delay(10);
             if (checkB == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkC == HIGH || checkD == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           }
           else if (pad2 == 2) {
-            int checkC = digitalRead(D_PAD_IN_C);
-            delay(10);
+            //int checkC = digitalRead(D_PAD_IN_C);
+            //delay(10);
             if (checkC == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkB == HIGH || checkD == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           }
           else {
-            int checkD = digitalRead(D_PAD_IN_D);
-            delay(10);
+            //int checkD = digitalRead(D_PAD_IN_D);
+            //delay(10);
             if (checkD == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkB == HIGH || checkC == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           }
+        } else if ((checkB == HIGH  && pad2 != 1) || (checkC == HIGH && pad2 != 2) || (checkD == HIGH && pad2 != 3)) {
+          IO_state_changed = true;
+          break;
         }
       }
       
       else if (pad1 == 1) {
-        int checkB = digitalRead(D_PAD_IN_B);
-        delay(10);
+        //int checkB = digitalRead(D_PAD_IN_B);
+        //delay(10);
         if (checkB == HIGH){
           if (pad2 == 0) {
-            int checkA = digitalRead(D_PAD_IN_A);
-            delay(10);
+            //int checkA = digitalRead(D_PAD_IN_A);
+            //delay(10);
             if (checkA == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkC == HIGH || checkD == HIGH) {
+              IO_state_changed = true;
+              break;
             }
-          }
+          } 
           else if (pad2 == 2) {
-            int checkC = digitalRead(D_PAD_IN_C);
-            delay(10);
+            //int checkC = digitalRead(D_PAD_IN_C);
+            //delay(10);
             if (checkC == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkA == HIGH || checkD == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           }
           else {
-            int checkD = digitalRead(D_PAD_IN_D);
-            delay(10);
+            //int checkD = digitalRead(D_PAD_IN_D);
+            //delay(10);
             if (checkD == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkA == HIGH || checkC == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           } 
+        } else if ((checkA == HIGH  && pad2 != 0) || (checkC == HIGH && pad2 != 2) || (checkD == HIGH && pad2 != 3)) {
+          IO_state_changed = true;
+          break;
         }
       }
       else if (pad1 == 2) {
-        int checkC = digitalRead(D_PAD_IN_C);
-        delay(10);
+        //int checkC = digitalRead(D_PAD_IN_C);
+        //delay(10);
         if (checkC == HIGH){
           if (pad2 == 1) {
-            int checkB = digitalRead(D_PAD_IN_B);
-            delay(10);
+            //int checkB = digitalRead(D_PAD_IN_B);
+            //delay(10);
             if (checkB == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
+              break;
+            } else if (checkA == HIGH || checkD == HIGH) {
+              IO_state_changed = true;
               break;
             }
           }
           else if (pad2 == 0) {
-            int checkA = digitalRead(D_PAD_IN_A);
-            delay(10);
+            //int checkA = digitalRead(D_PAD_IN_A);
+            //delay(10);
             if (checkA == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
+              break;
+            } else if (checkB == HIGH || checkD == HIGH) {
+              IO_state_changed = true;
               break;
             }
           }
@@ -565,29 +595,41 @@ volatile bool checkCorrect() {
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkA == HIGH || checkB == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           }
+        } else if ((checkA == HIGH  && pad2 != 0) || (checkB == HIGH && pad2 != 1) || (checkD == HIGH && pad2 != 3)) {
+          IO_state_changed = true;
+          break;
         }
       }
       else {
-        int checkD = digitalRead(D_PAD_IN_D);
-        delay(10);
+        //int checkD = digitalRead(D_PAD_IN_D);
+        //delay(10);
         if (checkD == HIGH){
           if (pad2 == 1) {
-            int checkB = digitalRead(D_PAD_IN_B);
-            delay(10);
+            //int checkB = digitalRead(D_PAD_IN_B);
+            //delay(10);
             if (checkB == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkA == HIGH || checkC == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           }
           else if (pad2 == 2) {
-            int checkC = digitalRead(D_PAD_IN_C);
-            delay(10);
+            //int checkC = digitalRead(D_PAD_IN_C);
+            //delay(10);
             if (checkC == HIGH){
               IO_state_changed = true;
               CORRECT_INPUT = true;
+              break;
+            } else if (checkA == HIGH || checkC == HIGH) {
+              IO_state_changed = true;
               break;
             }
           }
@@ -598,8 +640,14 @@ volatile bool checkCorrect() {
               IO_state_changed = true;
               CORRECT_INPUT = true;
               break;
+            } else if (checkB == HIGH || checkC == HIGH) {
+              IO_state_changed = true;
+              break;
             }
           }
+        } else if ((checkA == HIGH  && pad2 != 0) || (checkB == HIGH && pad2 != 1) || (checkC == HIGH && pad2 != 2)) {
+          IO_state_changed = true;
+          break;
         }
       }
       // check not slide pot
